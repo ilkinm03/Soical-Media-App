@@ -1,0 +1,53 @@
+POST http://localhost:3000/auth/login
+Content-Type: application/json
+
+{
+  "email": "ilkinm2003@gmail.com",
+  "password": "ilkinmammadli123"
+}
+
+###
+
+POST http://localhost:3000/auth/signup
+Content-Type: application/json
+
+{
+  "firstName": "Ilkin",
+  "lastName": "Mammadli",
+  "email": "ilkinm2003@gmail.com",
+  "password": "ilkinmammadli123",
+  "confirmPassword": "ilkinmammadli123"
+}
+
+###
+
+GET http://localhost:3000/auth/logout
+
+###
+
+POST http://localhost:3000/user/share/627fb8ba7d1cddd10d37cfa2
+Content-Type: application/json
+
+{
+  "title": "Hello",
+  "description": "Hello, World!"
+}
+
+###
+
+GET http://localhost:3000/user/posts/627fb8ba7d1cddd10d37cfa2
+Content-Type: application/json
+
+{
+  "posts": [
+    {
+      "_id": "627fb96f7d1cddd10d37cfab",
+      "userID": "627fb8ba7d1cddd10d37cfa2",
+      "title": "Hello",
+      "description": "Hello, World!",
+      "createdAt": "2022-05-14T14:15:11.772Z",
+      "updatedAt": "2022-05-14T14:15:11.772Z",
+      "__v": 0
+    }
+  ]
+}
