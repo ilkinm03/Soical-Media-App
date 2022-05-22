@@ -18,7 +18,7 @@ const postSchema = new Schema(
       maxlength: [128, "Description cannot be longer than 128 characters!"],
     },
     image: {
-      type: Buffer,
+      type: String,
     },
   },
   { timestamps: true }

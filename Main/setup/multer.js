@@ -1,32 +1,34 @@
 const multer = require("multer");
 
+const ApiError = require("../exceptions/api.error");
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    cb(null, "assets");
+    cb(null, "./public/images");
   },
-  file: (_req, file, cb) => {
+  filename: (_req, file, cb) => {
     cb(null, Date.now() + "-" + file.originalname);
   },
 });
 
-const limits = {
-  fileSize: 10 * 1000 * 1000,
-};
-
-const fileFilter = (req, file, cb) => {
+const fileFilter = (_req, file, cb) => {
   const fileEnum = ["image/png", "image/jpg", "image/jpeg"];
 
   if (!fileEnum.includes(file.mimetype)) {
-    cb(new Error("Invalid data type!"), false);
+    return cb(ApiError.BadRequest("Invalid file type!"), false);
   }
 
-  cb(null, true);
+  return cb(null, true);
+};
+
+const limits = {
+  fileSize: 5 * 1024 * 1024,
 };
 
 const upload = multer({
   storage,
-  limits,
   fileFilter,
+  limits,
 });
 
 module.exports.upload = upload.single("image");

@@ -1,10 +1,7 @@
 require("dotenv").config();
 const jwt = require("jsonwebtoken");
 
-const TokenModel = require("../models/token.model");
-
 const logger = require("../logger/logger");
-const ApiError = require("../exceptions/api.error");
 
 class TokenService {
   async generateTokens(userID) {
@@ -41,11 +38,6 @@ class TokenService {
   }
 
   async validateRefreshToken(refreshToken) {
-    if (!refreshToken) {
-      logger.debug("TokenService.validateRefreshToken -- null params");
-      throw ApiError.UnauthorizedError("You are not logged in!");
-    }
-
     try {
       logger.debug("TokenService.validateRefreshToken -- START");
 
@@ -59,26 +51,13 @@ class TokenService {
     }
   }
 
-  async saveRefreshToken(userID, refreshToken) {
-    try {
-      logger.debug("TokenService.saveRefreshToken -- START");
+  
 
-      const token = await TokenModel.create({
-        userID,
-        refreshToken,
+  async generateResetToken(email) {
+    try {
+      return jwt.sign({ email }, process.env.JWT_ACCESS_KEY, {
+        expiresIn: 5 * 60,
       });
-
-      logger.debug("TokenService.saveRefreshToken -- SUCCESS");
-
-      return token;
-    } catch (error) {
-      throw error;
-    }
-  }
-
-  async removeRefreshToken(userID) {
-    try {
-      return await TokenModel.deleteOne({ userID });
     } catch (error) {
       throw error;
     }

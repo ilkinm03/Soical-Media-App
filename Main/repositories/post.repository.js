@@ -7,7 +7,7 @@ class PostRepository {
         userID,
         title,
         description,
-        image,
+        image: image.path,
       });
 
       return post;

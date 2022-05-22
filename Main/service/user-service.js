@@ -2,8 +2,10 @@ const bcrypt = require("bcrypt");
 
 const UserRepository = require("../repositories/user.repository");
 const PostRepository = require("../repositories/post.repository");
+const TokenRepository = require("../repositories/token.repository");
 
 const TokenService = require("../service/token-service");
+const MailService = require("../service/mail-service");
 
 const logger = require("../logger/logger");
 const ApiError = require("../exceptions/api.error");
@@ -119,6 +121,11 @@ class UserService {
   }
 
   async logout(refreshToken) {
+    if (!refreshToken) {
+      logger.debug("UserController.logout.UserService -- null params");
+      throw ApiError.UnauthorizedError("You are not logged in!");
+    }
+
     try {
       logger.debug("UserController.logout.UserService -- START");
 
@@ -129,9 +136,172 @@ class UserService {
         throw ApiError.NotFoundException("User not found!");
       }
 
-      await TokenService.removeRefreshToken(user.userID);
+      await TokenRepository.removeRefreshToken(user.userID);
 
       logger.debug("UserController.logout.UserService -- SUCCESS");
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updatePassword(
+    userID,
+    currentPassword,
+    newPassword,
+    confirmNewPassword
+  ) {
+    if (!currentPassword || !newPassword || !confirmNewPassword) {
+      logger.warn("UserController.updatePassword.UserService -- null params");
+      throw ApiError.BadRequest("Please enter all the credentials!");
+    }
+
+    try {
+      logger.debug("UserController.updatePassword.UserService -- START");
+
+      const user = await UserRepository.findUserById(userID);
+
+      if (!user) {
+        logger.warn(
+          "UserController.updatePassword.UserService -- user not found"
+        );
+        throw ApiError.NotFoundException("User not found!");
+      }
+
+      if (currentPassword === newPassword) {
+        logger.warn(
+          "UserController.updatePassword.UserService -- passwords are the same"
+        );
+        throw ApiError.BadRequest(
+          "Current Password and New Password are the same!"
+        );
+      }
+
+      const isPasswordCorrect = await bcrypt.compare(
+        currentPassword,
+        user.password
+      );
+
+      if (!isPasswordCorrect) {
+        logger.warn(
+          "UserController.updatePassword.UserService -- incorrect password"
+        );
+        throw ApiError.BadRequest("Password is incorrect!");
+      }
+
+      if (newPassword !== confirmNewPassword) {
+        logger.warn("UserController.updatePassword.UserService -- not match");
+        throw ApiError.BadRequest("Passwords not match!");
+      }
+
+      const hashPassword = await bcrypt.hash(newPassword, 12);
+
+      const newUser = await UserRepository.findUserByIdAndUpdatePassword(
+        userID,
+        hashPassword
+      );
+
+      logger.debug("UserController.updatePassword.UserService -- SUCCESS");
+
+      return newUser;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async forgotPassword(email) {
+    try {
+      logger.debug("UserController.forgotPassword.UserService -- START");
+
+      const user = await UserRepository.findUserByEmail(email);
+
+      if (!user) {
+        logger.debug(
+          "UserController.forgotPassword.UserService -- user not found"
+        );
+        throw ApiError.NotFoundException("User not found!");
+      }
+
+      const resetToken = await TokenService.generateResetToken(email);
+
+      await UserRepository.updateUserResetToken(email, resetToken);
+      await MailService.sendResetPasswordMail(
+        email,
+        `${process.env.API_URL}/auth/reset-password/${resetToken}`
+      );
+
+      logger.debug("UserController.forgotPassword.UserService -- SUCCESS");
+
+      return { message: `Reset link has been set to ${email} address.` };
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async getEmailResetPassword(token) {
+    if (!token) {
+      logger.warn(
+        "UserController.getEmailResetPassword.UserService -- null param"
+      );
+      throw ApiError.BadRequest();
+    }
+
+    try {
+      logger.debug("UserController.getEmailResetPassword.UserService -- START");
+
+      const user = await UserRepository.findUserByResetToken(token);
+
+      if (!user) {
+        logger.warn(
+          "UserController.getEmailResetPassword.UserService -- not found"
+        );
+        throw ApiError.NotFoundException("User not found!");
+      }
+
+      logger.debug(
+        "UserController.getEmailResetPassword.UserService -- SUCCESS"
+      );
+
+      return user.email;
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async resetPassword(email, newPassword, confirmNewPassword) {
+    if (!email || !newPassword || !confirmNewPassword) {
+      logger.warn("UserController.resetPassword.UserService -- null params");
+      throw ApiError.BadRequest("Please enter all the credentials!");
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      logger.warn("UserController.resetPassword.UserService -- not match");
+      throw ApiError.BadRequest("Passwords not match!");
+    }
+
+    try {
+      logger.debug("UserController.resetPassword.UserService -- START");
+
+      const user = await UserRepository.findUserByEmail(email);
+
+      if (!user) {
+        logger.warn(
+          "UserController.resetPassword.UserService -- user not found"
+        );
+        throw ApiError.NotFoundException("User not found!");
+      }
+
+      const hashPassword = await bcrypt.hash(newPassword, 12);
+
+      const newUser = await UserRepository.findUserByIdAndUpdatePassword(
+        user._id,
+        hashPassword
+      );
+
+      await UserRepository.removeResetToken(newUser._id);
+
+      logger.warn("UserController.resetPassword.UserService -- SUCCESS");
+
+      return newUser;
     } catch (error) {
       throw error;
     }
@@ -141,7 +311,12 @@ class UserService {
     try {
       logger.debug("UserController.sharePost.UserService -- START");
 
-      const post = await PostRepository.createPost(userID, title, description, image);
+      const post = await PostRepository.createPost(
+        userID,
+        title,
+        description,
+        image
+      );
 
       if (!post) {
         logger.warn("UserController.sharePost.UserService -- post not created");

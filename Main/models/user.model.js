@@ -35,6 +35,7 @@ const userSchema = new Schema(
         ref: "Post",
       },
     ],
+    resetPasswordToken: String,
   },
   { timestamps: true }
 );

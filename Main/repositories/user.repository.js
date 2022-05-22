@@ -17,6 +17,14 @@ class UserRepository {
     }
   }
 
+  async findUserByResetToken(token) {
+    try {
+      return await UserModel.findOne({ resetPasswordToken: token });
+    } catch (error) {
+      throw error;
+    }
+  }
+
   async createUser(firstName, lastName, email, password) {
     try {
       return await UserModel.create({
@@ -47,6 +55,35 @@ class UserRepository {
       return await UserModel.findById(userID)
         .populate("posts")
         .select({ firstName: 1, lastName: 1, posts: 1 });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async findUserByIdAndUpdatePassword(userID, hashPassword) {
+    try {
+      return await UserModel.findByIdAndUpdate(userID, {
+        password: hashPassword,
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async updateUserResetToken(email, resetToken) {
+    try {
+      return await UserModel.findOneAndUpdate(
+        { email },
+        { resetPasswordToken: resetToken }
+      );
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  async removeResetToken(userID) {
+    try {
+      return UserModel.findByIdAndUpdate(userID, { resetPasswordToken: "" });
     } catch (error) {
       throw error;
     }

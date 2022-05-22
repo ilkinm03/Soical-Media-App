@@ -1,6 +1,8 @@
 const UserService = require("../service/user-service");
 const TokenService = require("../service/token-service");
 
+const TokenRepository = require("../repositories/token.repository");
+
 const logger = require("../logger/logger");
 
 class UserController {
@@ -36,7 +38,7 @@ class UserController {
       const user = await UserService.login(email, password);
       const tokens = await TokenService.generateTokens(user._id);
 
-      await TokenService.saveRefreshToken(user._id, tokens.refreshToken);
+      await TokenRepository.saveRefreshToken(user._id, tokens.refreshToken);
 
       res.cookie("x-social-auth", tokens.accessToken, {
         httpOnly: true,
@@ -74,12 +76,92 @@ class UserController {
     }
   }
 
+  async updatePassword(req, res, next) {
+    try {
+      logger.debug("UserController.updatePassword -- START");
+
+      const { currentPassword, newPassword, confirmNewPassword } = req.body;
+      const { id } = req.params;
+
+      const user = await UserService.updatePassword(
+        id,
+        currentPassword,
+        newPassword,
+        confirmNewPassword
+      );
+
+      logger.debug("UserController.updatePassword -- SUCCESS");
+
+      res.status(200).send({
+        msg: "The password successfully updated!",
+        success: true,
+        user,
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async forgotPassword(req, res, next) {
+    try {
+      logger.debug("UserController.forgotPassword -- START");
+
+      const { email } = req.body;
+
+      const user = await UserService.forgotPassword(email);
+
+      logger.debug("UserController.forgotPassword -- SUCCESS");
+
+      res.status(200).send(user);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async forgotPassword(req, res, next) {
+    try {
+      logger.debug("UserController.forgotPassword -- START");
+
+      const { email } = req.body;
+      const user = await UserService.forgotPassword(email);
+
+      logger.debug("UserController.forgotPassword -- SUCCESS");
+
+      res.status(200).send(user);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async resetPassword(req, res, next) {
+    try {
+      logger.debug("UserController.resetPassword -- START");
+
+      const { token } = req.params;
+      const { newPassword, confirmNewPassword } = req.body;
+
+      const email = await UserService.getEmailResetPassword(token);
+      const user = await UserService.resetPassword(
+        email,
+        newPassword,
+        confirmNewPassword
+      );
+
+      logger.debug("UserController.resetPassword -- SUCCESS");
+
+      res.status(200).send(user);
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async sharePost(req, res, next) {
     try {
       logger.debug("UserController.sharePost -- START");
 
-      const { title, description, image } = req.body;
+      const { title, description } = req.body;
       const { id } = req.params;
+      const image = req.file;
 
       const user = await UserService.sharePost(id, title, description, image);
 
