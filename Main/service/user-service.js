@@ -79,6 +79,8 @@ class UserService {
         throw ApiError.BadRequest("Incorrect email or password!");
       }
 
+      await MailService.sendLoginSecurityWarn(email);
+
       logger.debug("UserController.login.UserService -- SUCCESS");
 
       return candidate;
